@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import html,json
 P=Path
 steps=[
@@ -22,8 +22,8 @@ for n,title,body,commands,qa in steps:
  parts.append(f'<section id="lab{n}"><span class="number">LAB {n}</span><h2>{title}</h2><p>{html.escape(body)}</p>')
  for label,cmd in commands:parts.append('<h3>'+label+'</h3><div class="code"><button type="button" aria-label="Copy '+html.escape(label)+'">Copy</button><pre><code>'+html.escape(cmd)+'</code></pre></div>')
  if n=='05':parts.append('<p>Open: <a href="http://nginx.lab.test:8080">NGINX</a> · <a href="http://prometheus.lab.test:8080">Prometheus</a> · <a href="http://grafana.lab.test:8080/explore">Grafana Explore</a>. Select Prometheus and query <code>up</code>. Wait about 30 seconds for initial scrapes.</p>')
- parts.append('<h3>Interview checkpoint</h3>')
- for q,a in qa:parts.append('<details><summary>'+html.escape(q)+'</summary><p>'+html.escape(a)+'</p></details>')
+ parts.append('<h3>Interview questions &amp; answers</h3><p>Review these answers after completing this lab. Click a question to collapse its answer for self-testing.</p>')
+ for q,a in qa:parts.append('<details class="interview" open><summary>'+html.escape(q)+'</summary><p><strong>Answer:</strong> '+html.escape(a)+'</p></details>')
  parts.append('</section>')
 parts.append('<section><h2>Explore every chart file</h2><p>Expand a file to inspect and copy the exact repository source. Change values.yaml, then repeat helm upgrade --install to apply your change.</p>')
 for path in [P('controller-values.yaml'),*sorted(P('charts').rglob('*.yaml'))]:parts.append('<details><summary>'+str(path).replace('\\','/')+'</summary><div class="code"><button type="button">Copy</button><pre><code>'+html.escape(path.read_text())+'</code></pre></div></details>')
