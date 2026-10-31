@@ -1,0 +1,15 @@
+replicaCount: 2
+image: "prom/prometheus:v3.5.0"
+service:
+  port: 9090
+ingress:
+  enabled: true
+  className: traefik
+  host: prometheus.lab.test
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

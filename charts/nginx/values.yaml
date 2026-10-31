@@ -1,0 +1,15 @@
+replicaCount: 2
+image: "nginx:1.28.0-alpine"
+service:
+  port: 80
+ingress:
+  enabled: true
+  className: traefik
+  host: nginx.lab.test
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

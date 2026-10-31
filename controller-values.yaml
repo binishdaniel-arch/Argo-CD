@@ -1,0 +1,19 @@
+deployment:
+  replicas: 2
+providers:
+  kubernetesCRD:
+    enabled: false
+  kubernetesIngress:
+    enabled: true
+    nativeLBByDefault: true
+    publishedService:
+      enabled: false
+  kubernetesGateway:
+    enabled: false
+service:
+  type: ClusterIP
+ingressClass:
+  name: traefik
+  isDefaultClass: false
+additionalArguments:
+  - "--accesslog=true"

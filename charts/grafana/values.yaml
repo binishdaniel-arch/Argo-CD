@@ -1,0 +1,15 @@
+replicaCount: 2
+image: "grafana/grafana:12.1.0"
+service:
+  port: 3000
+ingress:
+  enabled: true
+  className: traefik
+  host: grafana.lab.test
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
