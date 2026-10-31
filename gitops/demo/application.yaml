@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-nginx
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/vrdipu/ingress-lab.git
+    targetRevision: main
+    path: gitops/demo/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd-demo
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -32,20 +32,29 @@ bash scripts/killercoda-access.sh
 
 Do not select the docker-desktop context. The scripts recognize `/etc/killercoda/host`. Keep the access launcher running and open its printed URLs or Traffic / Ports 8080–8083. Generated-host Ingress rules send browser traffic through Traefik; no local hosts-file edit is needed. Use a second KillerCoda terminal for validation and exercises. These access URLs expose the ephemeral lab; use only lab credentials, never production secrets. See the platform guide for details and session limitations.
 
-## Section 2 — Argo CD
+## Section 2 ? Argo CD, taught from the beginning
 
-After Lab 1:
+Open **lab2-argocd.html** and follow one simple sequence:
+
+1. Deploy Argo CD first. No ingress or Lab 1 installation is required.
+2. Open the Argo CD URL and sign in.
+3. Read/create the demo Deployment and Service manifests.
+4. Connect your public Git repository and understand every Application field.
+5. Apply only the Application; Argo automatically deploys the workload.
+6. Push a replica or pod-configuration change and watch it reconcile in the UI.
+7. Demonstrate self-healing of a manual cluster edit.
+8. Install the CLI and use list/get/refresh/wait/history.
 
 ```bash
-bash scripts/argocd-setup.sh
-# Restart the access forward after the controller rollout.
-# Docker Desktop: the localhost port-forward above.
-# KillerCoda: bash scripts/killercoda-access.sh again (now also prints Argo URL).
-bash scripts/argocd-sync.sh
-bash scripts/argocd-check.sh
+bash scripts/argocd-install.sh
+bash scripts/argocd-ui.sh
 ```
 
-Students must fork this repository to practice Git changes. Set origin to your own fork, run `bash scripts/gitops-repository.sh https://github.com/YOUR-USERNAME/ingress-lab.git`, review/commit/push the source changes, then run setup. The AppProject and all Application repoURLs must match the public fork. Do not push exercises to the shared instructor repository. Configure your Git name/email if needed; authenticate GitHub interactively when pushing without saving tokens in commands or repository files.
+The helper prints http://localhost:8090 on Docker Desktop or the generated port-8090 URL on KillerCoda. Keep it running and use another terminal for the guide. The beginner demo uses `gitops/demo/application.yaml` watching `gitops/demo/manifests`, deployed into its own `argocd-demo` namespace. It starts with auto-sync and self-heal enabled. The original Lab 1 chart adoption is optional after the main demo; the older argocd-setup.sh helper is not the beginner entry point.
+
+Students should fork this repository before Git-change exercises. Update origin and run `bash scripts/gitops-repository.sh https://github.com/YOUR-USERNAME/ingress-lab.git`; review, commit and push the source changes. This updates the demo Application and the optional chart Applications/project. Private credentials never belong in Git. Argo can read a public repository without a credential; Settings ? Repositories lets you show that connection explicitly.
+
+[Beginner demo test evidence](docs/ARGOCD-BEGINNER-TEST-RESULTS.md)
 
 ## Scope and ownership
 
