@@ -1,35 +1,64 @@
-# Ingress, understood
+# Ingress, understood — Git Bash + KillerCoda
 
-Open **index.html** for the full light-themed guide, diagram, copy buttons, all chart sources, and interview checkpoints after each lab. No frontend installation required.
+Open **index.html** for Section 1 and **lab2-argocd.html** for Section 2. Both have a light theme, copyable Bash commands, diagrams, and visible interview answers. No frontend build or CDN is required.
 
-## Quick start (PowerShell)
+Start with **environments.html** for platform-specific setup and browser access.
 
-Docker Desktop Kubernetes must be enabled. You need kubectl, Helm 3 or 4, registry internet access, and the docker-desktop context. Run from the repository root:
+## Docker Desktop — Git Bash
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1
+Enable Kubernetes in Docker Desktop and install Git, kubectl and Helm. Open **Git Bash**, then:
+
+```bash
+export MSYS_NO_PATHCONV=1
+kubectl config use-context docker-desktop
+bash scripts/deploy.sh
 kubectl port-forward -n ingress-system svc/lab-ingress-traefik 8080:80 --address 127.0.0.1
 ```
 
-In a second terminal:
+Keep the forward open. In a second Git Bash terminal, run `bash scripts/validate.sh` and `bash scripts/smoke-test.sh`. The guide includes Windows hosts-file instructions for local UI links.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/validate.ps1
-powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
+## KillerCoda — Linux Bash
+
+Open the [Kubernetes playground](https://killercoda.com/playgrounds/scenario/kubernetes). In its terminal:
+
+```bash
+git clone https://github.com/vrdipu/ingress-lab.git
+cd ingress-lab
+bash scripts/install-helm-linux.sh
+export PATH="$HOME/.local/bin:$PATH"
+bash scripts/deploy.sh
+bash scripts/killercoda-access.sh
 ```
 
-Use the HTML guide for hosts-file/browser instructions, manual installation, traffic flow, troubleshooting and cleanup.
+Do not select the docker-desktop context. The scripts recognize `/etc/killercoda/host`. Keep the access launcher running and open its printed URLs or Traffic / Ports 8080–8083. Generated-host Ingress rules send browser traffic through Traefik; no local hosts-file edit is needed. Use a second KillerCoda terminal for validation and exercises. These access URLs expose the ephemeral lab; use only lab credentials, never production secrets. See the platform guide for details and session limitations.
 
-## Section 2: Argo CD and GitOps
+## Section 2 — Argo CD
 
-Open **lab2-argocd.html** for 11 guided labs, 22 interview answers, and GitOps management of these same three applications. Run `powershell -ExecutionPolicy Bypass -File scripts/argocd-setup.ps1` after Lab 1. See [Argo CD test results](docs/ARGOCD-TEST-RESULTS.md).
+After Lab 1:
 
-## Scope
+```bash
+bash scripts/argocd-setup.sh
+# Restart the access forward after the controller rollout.
+# Docker Desktop: the localhost port-forward above.
+# KillerCoda: bash scripts/killercoda-access.sh again (now also prints Argo URL).
+bash scripts/argocd-sync.sh
+bash scripts/argocd-check.sh
+```
 
-Three locally authored Helm charts: nginx, prometheus, grafana. Each has two replicas and a ClusterIP Service and host-based Ingress. Official Traefik chart 42.2.0 is vendored under vendor/. Grafana datasource is provisioned. Prometheus scrapes itself and Grafana. NGINX has no metrics exporter. Two independent Prometheus instances and ephemeral Grafana state are deliberate learning simplifications, not production HA. HTTP and anonymous Grafana are restricted to a localhost exercise. All images and controller chart are pinned by version tag, not immutable digest.
+Students must fork this repository to practice Git changes. Set origin to your own fork, run `bash scripts/gitops-repository.sh https://github.com/YOUR-USERNAME/ingress-lab.git`, review/commit/push the source changes, then run setup. The AppProject and all Application repoURLs must match the public fork. Do not push exercises to the shared instructor repository. Configure your Git name/email if needed; authenticate GitHub interactively when pushing without saving tokens in commands or repository files.
 
-[Actual test evidence](docs/TEST-RESULTS.md) · [Traffic diagram](docs/architecture.svg)
+## Scope and ownership
+
+Three locally authored Helm charts deploy NGINX, Prometheus and Grafana with two replicas, Services and host-based Ingress. Official Traefik 42.2.0 and community argo-helm Argo CD 10.11.6 charts are vendored. Version tags are pinned; images are not digest-pinned. Argo adopts the same Lab 1 resources. Freeze the original Helm release records during GitOps; deploy/cleanup scripts block while the lab Applications exist. Keep Argo itself and Traefik Helm-managed.
+
+Monitoring data is temporary and replicas do not share storage. This demonstrates ingress and GitOps, not production monitoring HA. KillerCoda access Ingresses are runtime conveniences outside the three Argo Applications; their generated hostnames must not be committed to Git.
+
+Bash scripts are the main workflow. Older `.ps1` files remain optional compatibility helpers and are not required for these guides. Scripts use LF endings; invoke them with `bash scripts/<name>.sh`.
+
+[Original ingress test evidence](docs/TEST-RESULTS.md) · [Argo CD evidence](docs/ARGOCD-TEST-RESULTS.md) · [Bash/KillerCoda portability evidence](docs/PORTABILITY-TEST-RESULTS.md)
+
+The local Docker Desktop cluster has been tested. The portability report distinguishes locally executed Git Bash/Linux checks from any live KillerCoda checks; do not infer an external playground run from local tests.
 
 ## GitHub
 
-This is a local Git repository; create an empty repository in your GitHub account, then set its URL and push. No GitHub upload is performed automatically. See the HTML guide for commands. The vendored upstream chart retains its upstream license. Your application charts and guide use the MIT license.
+Repository: https://github.com/vrdipu/ingress-lab. Download or clone it; open the HTML guides locally. Create your own fork for student GitOps exercises. Your charts and guide use MIT; vendored charts retain their upstream licenses.
