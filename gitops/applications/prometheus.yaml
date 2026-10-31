@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lab-prometheus
+  namespace: argocd
+  # No resources-finalizer: deleting this Application preserves workloads.
+spec:
+  project: ingress-lab
+  source:
+    repoURL: https://github.com/vrdipu/ingress-lab.git
+    targetRevision: main
+    path: charts/prometheus
+    helm:
+      releaseName: prometheus
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-lab
+  # Start with MANUAL sync so students can inspect the adoption diff.
+  syncPolicy:
+    syncOptions:
+      - ApplyOutOfSyncOnly=true

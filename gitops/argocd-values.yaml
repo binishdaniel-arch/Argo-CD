@@ -1,0 +1,24 @@
+# Local learning installation; not a production HA control plane.
+crds:
+  install: true
+configs:
+  params:
+    server.insecure: true
+  cm:
+    url: http://argocd.lab.test:8080
+    timeout.reconciliation: 60s
+    application.resourceTrackingMethod: annotation
+server:
+  replicas: 1
+  service:
+    type: ClusterIP
+controller:
+  replicas: 1
+repoServer:
+  replicas: 1
+applicationSet:
+  replicas: 1
+dex:
+  enabled: false
+notifications:
+  enabled: false

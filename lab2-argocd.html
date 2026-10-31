@@ -1,0 +1,222 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lab 2 • GitOps with Argo CD</title><style>*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#faf9f4;color:#203a42;font:16px/1.65 system-ui,sans-serif}header,main,footer{max-width:1180px;margin:auto;padding:32px}header{padding-top:65px}h1{font-size:clamp(38px,6vw,68px);line-height:1.08;letter-spacing:-3px;max-width:850px}h2{font-size:30px;line-height:1.25}h3{font-size:18px}a{color:#166663}p{max-width:950px}.eyebrow{font-weight:750;letter-spacing:2px;color:#9c5b24}.lead{font-size:21px;max-width:800px}.tags{display:flex;flex-wrap:wrap;gap:10px}.tags span{background:#e5f0e9;border-radius:30px;padding:7px 16px}nav{background:#fff;padding:18px;border:1px solid #dce5df;border-radius:16px;display:flex;flex-wrap:wrap;gap:16px}section{background:white;border:1px solid #dce5df;border-radius:22px;padding:30px;margin:26px 0;scroll-margin-top:20px}.number{color:#bd6c36;font-size:17px;display:block;letter-spacing:2px}.code{position:relative;background:#eff5f4;border:1px solid #d3e2de;border-radius:12px;margin:14px 0}pre{overflow:auto;padding:48px 20px 20px;margin:0;white-space:pre;font:14px/1.7 Consolas,monospace;color:#163d43}button{position:absolute;right:10px;top:10px;background:#fff;color:#245a56;border:1px solid #b9d0c9;border-radius:7px;padding:5px 12px;cursor:pointer}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #cb7d36;outline-offset:3px}details{border-top:1px solid #e3eae5;padding:13px 0}summary{cursor:pointer;font-weight:650}.note{background:#fff1d9;border-left:4px solid #d59c47;padding:18px;border-radius:6px}img{width:100%;height:auto}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px;border-bottom:1px solid #dde6e1}footer{color:#56706f}@media(max-width:600px){header,main,footer{padding:18px}section{padding:20px}h1{letter-spacing:-1px}}@media print{button,nav{display:none}section{break-inside:avoid}pre{white-space:pre-wrap}body{background:white}}</style><header><div class="eyebrow">SECTION 2 / GITOPS WITH ARGO CD</div><h1>Commit the intent.<br>Watch it reconcile.</h1><p class="lead">Take today’s three ingress applications from Helm deployment to a Git-driven reconciliation loop.</p><div class="tags"><span>11 hands-on labs</span><span>Answers included</span><span>Same charts &amp; URLs</span><span>Manual → auto → self-heal → prune</span></div><p><a href="index.html">← Section 1: Ingress foundations</a> · <a href="docs/ARGOCD-TEST-RESULTS.md">Local verification report</a></p></header><main><nav><a href="#lab1">01 GitOps: Git declares, Argo CD reconciles</a><a href="#lab2">02 Install the Argo CD control plane</a><a href="#lab3">03 Open the URL and sign in</a><a href="#lab4">04 Read the Application and adopt today’s workloads</a><a href="#lab5">05 Manual sync: change Git, inspect diff, deploy</a><a href="#lab6">06 Automated sync and self-healing</a><a href="#lab7">07 Pruning: delete only what Git removed</a><a href="#lab8">08 Explore the UI and optional CLI</a><a href="#lab9">09 Rollback by Git revert and understand ownership</a><a href="#lab10">10 Troubleshoot with evidence</a><a href="#lab11">11 Pause management, restore baseline and clean up deliberately</a></nav><section><h2>Two flows, one cluster</h2><img src="docs/gitops-architecture.svg" alt="Git changes flow through Argo CD to Kubernetes while browser traffic flows through Traefik to Services and two pods per application."><p>Argo CD manages desired configuration. It does not serve the three application requests or replace their ingress controller.</p><div class="note">Commands use PowerShell and this repository root. Keep credentials out of Git. The public repository URL is preconfigured for vrdipu/ingress-lab; students should use their own fork for write exercises.</div></section><section id="lab1"><span class="number">LAB 2.01</span><h2>GitOps: Git declares, Argo CD reconciles</h2><p>Git contains the desired state. Argo CD fetches this repository, renders each Helm chart, compares it with Kubernetes, and applies changes when sync is requested or automated. Kubernetes controllers then create pods. GitOps is pull-based delivery: CI can test and push Git changes without holding your cluster-admin credentials. Sync status and health are different: Synced means desired resources match live resources; Healthy means resource health checks pass. A deployment can be Synced and still Degraded.</p><h3>Check prerequisites</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl config use-context docker-desktop
+kubectl get nodes
+kubectl get deployments -n ingress-lab
+kubectl get ingressclass traefik
+git remote -v</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>What is reconciliation?</summary><p><strong>Answer:</strong> A repeated compare-and-act loop that converges actual state toward desired state. Git polling detects new desired state; Kubernetes watches detect live changes.</p></details><details class="interview" open><summary>Is Argo CD a CI build system?</summary><p><strong>Answer:</strong> No. Build, test, scan and push images in CI. Commit the desired image tag or digest; Argo CD delivers that declared state.</p></details></section><section id="lab2"><span class="number">LAB 2.02</span><h2>Install the Argo CD control plane</h2><p>Complete Lab 1 first. Use this repository root in PowerShell. The pinned community-maintained argo-helm chart 10.11.6 installs Argo CD v3.5.6. The setup also configures Traefik to publish 127.0.0.1 as the Ingress status address, so the default Argo Ingress health check can finish. This reports a local entry address; it does not test HTTP connectivity. This small local installation runs a single controller, server, repo-server and Redis, not a production HA installation. Allow extra cluster resources and image-download time. The setup script creates a restricted AppProject and three Applications in manual-sync mode; it does not sync them automatically. For a fork, change repoURL in all three Application files AND sourceRepos in the project file to your repository before setup.</p><h3>Install all prerequisites for Lab 2</h3><div class="code"><button type="button">Copy</button><pre><code>powershell -ExecutionPolicy Bypass -File scripts/argocd-setup.ps1</code></pre></div><h3>Inspect components</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl get pods,svc -n argocd
+kubectl get crd applications.argoproj.io appprojects.argoproj.io
+kubectl get applications -n argocd
+kubectl get appproject ingress-lab -n argocd</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>What do the components do?</summary><p><strong>Answer:</strong> The API server serves UI/API and authentication. Repo-server fetches Git and renders manifests. Application-controller compares and reconciles resources. Redis caches data. ApplicationSet can generate Applications; it is optional in this lab.</p></details><details class="interview" open><summary>Application versus AppProject?</summary><p><strong>Answer:</strong> An Application defines one source, destination and sync policy. AppProject limits allowed repositories, destinations and resource kinds. It complements Kubernetes RBAC; it does not replace it.</p></details></section><section id="lab3"><span class="number">LAB 2.03</span><h2>Open the URL and sign in</h2><p>Argo CD is exposed through the existing Traefik controller at http://argocd.lab.test:8080. The local values disable Argo server TLS so Traefik forwards ordinary HTTP; this is only a localhost exercise. The port-forward binds to 127.0.0.1. Add the hosts entry using an elevated editor. Keep the password out of Git and screenshots. After first login, change it using User Info → Update Password. Do not reuse this local HTTP configuration for a public server.</p><p><a href="http://argocd.lab.test:8080">Open Argo CD UI</a> · Username: <code>admin</code>. Hosts file: <code>C:\Windows\System32\drivers\etc\hosts</code>.</p><h3>Terminal A: keep ingress access running</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl port-forward -n ingress-system svc/lab-ingress-traefik 8080:80 --address 127.0.0.1</code></pre></div><h3>Add this line to the Windows hosts file</h3><div class="code"><button type="button">Copy</button><pre><code>127.0.0.1 argocd.lab.test</code></pre></div><h3>Read the initial password locally</h3><div class="code"><button type="button">Copy</button><pre><code>$encoded = kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath=&#x27;{.data.password}&#x27;
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encoded))</code></pre></div><h3>Check Argo server health through ingress</h3><div class="code"><button type="button">Copy</button><pre><code>curl.exe -i -H &quot;Host: argocd.lab.test&quot; http://127.0.0.1:8080/healthz</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>Which credentials do I use?</summary><p><strong>Answer:</strong> Username admin and the initial password stored in argocd-initial-admin-secret. If you changed the password earlier, use the changed password; the initial secret is not a current-password lookup.</p></details><details class="interview" open><summary>Why configure server.insecure?</summary><p><strong>Answer:</strong> Here it selects HTTP behind the local ingress, not anonymous access. Authentication remains enabled. Production should use trusted TLS and appropriate SSO/RBAC.</p></details></section><section id="lab4"><span class="number">LAB 2.04</span><h2>Read the Application and adopt today’s workloads</h2><p>Open Applications in the UI: lab-nginx, lab-prometheus and lab-grafana. Inspect Details → source repository, main revision, charts/&lt;app&gt; path, destination ingress-lab, and project ingress-lab. Each source uses the same original Helm chart with values.yaml and a matching releaseName. These Applications adopt the existing named resources without uninstalling them. There is no resources-finalizer, so deleting an Application preserves workloads by default. Inspect DIFF before SYNC; normal adoption adds Argo tracking metadata. Never use force/replace for this handover. The old Helm release records remain as frozen history: Argo CD uses helm template, not helm install, and does not update Helm release history. Do not run helm upgrade, helm rollback or helm uninstall for these three apps after adoption. The original scripts now block if these Applications exist.</p><h3>Review the NGINX declaration</h3><div class="code"><button type="button">Copy</button><pre><code>Get-Content gitops/applications/nginx.yaml
+kubectl get application lab-nginx -n argocd -o yaml</code></pre></div><h3>Sync all three, without installing the Argo CLI</h3><div class="code"><button type="button">Copy</button><pre><code>powershell -ExecutionPolicy Bypass -File scripts/argocd-sync.ps1
+powershell -ExecutionPolicy Bypass -File scripts/argocd-check.ps1</code></pre></div><h3>Verify ownership and existing routes</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl get deployment nginx -n ingress-lab -o yaml
+powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>Does Argo CD install a Helm release?</summary><p><strong>Answer:</strong> No. It renders Helm manifests and manages Kubernetes resources itself. helm list can still show the old frozen records from Lab 1; those records are not current GitOps state.</p></details><details class="interview" open><summary>Why keep the existing resource names and namespace?</summary><p><strong>Answer:</strong> They let Argo CD adopt the intended resources without creating parallel apps. Inspect the diff to confirm identity and avoid an accidental replacement.</p></details></section><section id="lab5"><span class="number">LAB 2.05</span><h2>Manual sync: change Git, inspect diff, deploy</h2><p>Start with manual sync. Edit only charts/nginx/values.yaml, changing replicaCount from 2 to 3, then commit and push. Use your fork URL if you are a student. Refresh asks Argo to compare; it does not deploy. Expect OutOfSync while live replicas remain 2. Open DIFF to see desired 3 versus live 2, then SYNC. Wait for Healthy and three replicas. Finally restore replicaCount to 2 in Git, commit, push, refresh and sync again. The standard check script expects the baseline two replicas.</p><h3>Change the desired replica count in Git</h3><div class="code"><button type="button">Copy</button><pre><code>$path = &quot;charts/nginx/values.yaml&quot;
+(Get-Content $path -Raw).Replace(&quot;replicaCount: 2&quot;, &quot;replicaCount: 3&quot;) | Set-Content -Encoding utf8 $path
+helm lint ./charts/nginx --strict
+git add charts/nginx/values.yaml
+git commit -m &quot;Practice GitOps: scale nginx to three replicas&quot;
+git push origin main</code></pre></div><h3>Request comparison and inspect current state</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl annotate application lab-nginx -n argocd argocd.argoproj.io/refresh=hard --overwrite
+kubectl get application lab-nginx -n argocd
+kubectl get deployment nginx -n ingress-lab</code></pre></div><h3>Apply the Git state</h3><div class="code"><button type="button">Copy</button><pre><code>powershell -ExecutionPolicy Bypass -File scripts/argocd-sync.ps1 -App nginx
+kubectl get deployment nginx -n ingress-lab</code></pre></div><h3>Restore two replicas through Git</h3><div class="code"><button type="button">Copy</button><pre><code>$path = &quot;charts/nginx/values.yaml&quot;
+(Get-Content $path -Raw).Replace(&quot;replicaCount: 3&quot;, &quot;replicaCount: 2&quot;) | Set-Content -Encoding utf8 $path
+git add charts/nginx/values.yaml
+git commit -m &quot;Restore nginx baseline to two replicas&quot;
+git push origin main
+kubectl annotate application lab-nginx -n argocd argocd.argoproj.io/refresh=hard --overwrite
+# Wait until Details shows the new Git revision, then:
+powershell -ExecutionPolicy Bypass -File scripts/argocd-sync.ps1 -App nginx</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>Refresh versus sync?</summary><p><strong>Answer:</strong> Refresh recalculates comparison, and hard refresh also invalidates cached manifests. Sync applies desired manifests. A refresh can lead to deployment only when automated sync is enabled.</p></details><details class="interview" open><summary>What proves the change came from Git?</summary><p><strong>Answer:</strong> The Application’s resolved commit SHA, the desired/live diff and sync operation history link the rollout to the pushed commit, rather than a local uncommitted edit.</p></details></section><section id="lab6"><span class="number">LAB 2.06</span><h2>Automated sync and self-healing</h2><p>For permanent policy changes edit the Application YAML in Git, commit/push, then kubectl apply the declaration. These bootstrap Applications are not themselves managed by a parent Application, so pushing a policy file alone does not update the live Application. Auto-sync deploys Git changes; selfHeal repairs live drift even when the Git commit has not changed. Start with prune false. After applying the policy, manually scale NGINX to 1. Observe Argo CD restore spec.replicas to the Git value 2, then wait for 2/2 ready. Do not use this technique where an HPA is meant to own replicas without first planning field ownership.</p><h3>Create the practice auto-sync policy</h3><div class="code"><button type="button">Copy</button><pre><code>@&#x27;
+automated:
+  enabled: true
+  prune: false
+  selfHeal: true
+&#x27;@
+# Add the block above under spec.syncPolicy in gitops/applications/nginx.yaml.
+# Keep the existing syncOptions block at the same indentation as automated.
+git add gitops/applications/nginx.yaml
+git commit -m &quot;Enable nginx auto-sync and self-healing&quot;
+git push origin main
+kubectl apply -f gitops/applications/nginx.yaml</code></pre></div><h3>Create drift and watch repair</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl scale deployment nginx -n ingress-lab --replicas=1
+kubectl get deployment nginx -n ingress-lab -w
+# Ctrl+C after spec replicas returns to 2 and both pods are ready.
+kubectl get application lab-nginx -n argocd
+kubectl rollout status deployment/nginx -n ingress-lab --timeout=180s</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>Auto-sync versus selfHeal?</summary><p><strong>Answer:</strong> Auto-sync delivers a changed desired state from Git. selfHeal also triggers correction for cluster-only changes at the same Git revision.</p></details><details class="interview" open><summary>Why did my kubectl edit disappear?</summary><p><strong>Answer:</strong> With selfHeal enabled, Git remains authoritative for managed fields. Commit the intended change instead of repeatedly editing the cluster.</p></details></section><section id="lab7"><span class="number">LAB 2.07</span><h2>Pruning: delete only what Git removed</h2><p>Pruning deletes resources previously tracked by this Application when they disappear from desired manifests. It does not delete arbitrary unrelated ConfigMaps. Use only the disposable gitops-prune-demo ConfigMap for practice. Keep automatic prune false and use an explicit UI SYNC with PRUNE checked for the removal. This separates Git removal, OutOfSync detection, and deletion. Never practice pruning on Prometheus data or namespaces.</p><h3>Add a disposable chart template</h3><div class="code"><button type="button">Copy</button><pre><code>Copy-Item gitops/exercises/prune-demo.yaml charts/nginx/templates/prune-demo.yaml
+git add charts/nginx/templates/prune-demo.yaml
+git commit -m &quot;Practice GitOps: add disposable prune demo&quot;
+git push origin main
+kubectl annotate application lab-nginx -n argocd argocd.argoproj.io/refresh=hard --overwrite
+# Wait for auto-sync or manually sync after the new revision is visible.
+kubectl get configmap gitops-prune-demo -n ingress-lab</code></pre></div><h3>Remove it from desired state</h3><div class="code"><button type="button">Copy</button><pre><code>git rm charts/nginx/templates/prune-demo.yaml
+git commit -m &quot;Practice GitOps: remove disposable prune demo&quot;
+git push origin main
+kubectl annotate application lab-nginx -n argocd argocd.argoproj.io/refresh=hard --overwrite
+# In UI: lab-nginx → SYNC → enable PRUNE → SYNCHRONIZE.
+kubectl get configmap gitops-prune-demo -n ingress-lab
+# Expected after prune: NotFound.</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>Why can a deleted Git resource remain live?</summary><p><strong>Answer:</strong> Without pruning, Argo CD leaves it live and reports that it requires pruning. Removing a manifest alone is not always permission to delete the live resource.</p></details><details class="interview" open><summary>What protects against an empty application deleting everything?</summary><p><strong>Answer:</strong> Automatic pruning normally keeps allowEmpty false. It is a safety guard, not a substitute for review, backups and restricted permissions.</p></details></section><section id="lab8"><span class="number">LAB 2.08</span><h2>Explore the UI and optional CLI</h2><p>UI tasks: inspect the resource tree; select a Deployment and view desired/live manifests, events and pod logs; use DIFF before SYNC; check History and Rollback to identify revisions. Refresh is cheaper than Hard Refresh; use hard refresh for suspected stale rendering. Do not click DELETE with cascading deletion enabled. Optional CLI commands below require a matching official Argo CD CLI already installed. The full lab works using UI and kubectl without it. --grpc-web carries CLI requests over this HTTP ingress.</p><h3>Optional CLI login and inspection</h3><div class="code"><button type="button">Copy</button><pre><code>argocd login argocd.lab.test:8080 --username admin --plaintext --grpc-web
+# Enter password interactively; do not put it in command history.
+argocd app list --grpc-web
+argocd app get lab-nginx --grpc-web
+argocd app diff lab-nginx --grpc-web
+argocd app history lab-nginx --grpc-web
+argocd app sync lab-nginx --grpc-web
+argocd app wait lab-nginx --sync --health --timeout 180 --grpc-web</code></pre></div><h3>Get the same status with kubectl</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl get applications -n argocd
+kubectl get application lab-nginx -n argocd -o jsonpath=&#x27;{.status.sync.revision}&#x27;
+kubectl get application lab-nginx -n argocd -o jsonpath=&#x27;{.status.operationState.message}&#x27;</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>When should Hard Refresh be used?</summary><p><strong>Answer:</strong> When comparison may be using stale repository/render caches; it forces fresh manifest generation. It is not a fix for invalid YAML, missing permissions or unhealthy pods.</p></details><details class="interview" open><summary>What is a Helm parameter override?</summary><p><strong>Answer:</strong> An Application-level override can take precedence over values.yaml, so the chart file may not explain effective desired state. Prefer reviewed Git values and inspect Application parameters during troubleshooting.</p></details></section><section id="lab9"><span class="number">LAB 2.09</span><h2>Rollback by Git revert and understand ownership</h2><p>The preferred GitOps rollback is a new commit that reverts the bad change, followed by reconciliation. If auto-sync is enabled, an imperative rollback can be blocked or later replaced by the current Git head. Use a specific single-purpose commit SHA; inspect the diff before reverting. The Application definitions are bootstrapped with kubectl; their child workloads are Git-managed. App-of-apps or ApplicationSet is a later exercise for managing the Application lifecycle itself.</p><h3>Inspect and revert a practice commit</h3><div class="code"><button type="button">Copy</button><pre><code>git log --oneline -8
+# Replace BAD_COMMIT with the SHA of your own single-purpose practice change:
+git revert BAD_COMMIT
+git push origin main
+kubectl annotate application lab-nginx -n argocd argocd.argoproj.io/refresh=hard --overwrite
+# Manual-sync policy? Inspect diff and sync. Auto-sync? Watch reconciliation.</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>Why revert rather than reset and force-push?</summary><p><strong>Answer:</strong> Revert preserves an auditable history and works cleanly with shared branches. Force-pushing rewrites history and complicates review and correlation.</p></details><details class="interview" open><summary>Why does pushing an Application policy YAML not change policy automatically?</summary><p><strong>Answer:</strong> In this design no parent Application watches gitops/applications. Reapply the YAML after committing it, or deliberately introduce an app-of-apps lifecycle later.</p></details></section><section id="lab10"><span class="number">LAB 2.10</span><h2>Troubleshoot with evidence</h2><p>Use the Application conditions and operation message first. ComparisonError often means a repository fetch or rendering problem. SyncFailed can mean API validation or AppProject restrictions. Synced + Degraded usually needs pod readiness, image pulls, resource or application debugging. Do not fix persistent state by blindly clicking Force or Replace. For a private fork, connect it through Settings → Repositories with narrowly scoped credentials stored in Kubernetes Secrets, never committed to this repo. A public repo normally needs no repository credential.</p><h3>Read errors and component logs</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl get application lab-nginx -n argocd -o yaml
+kubectl get events -n ingress-lab --sort-by=.lastTimestamp
+kubectl logs -n argocd statefulset/argocd-application-controller --tail=50
+kubectl logs -n argocd deployment/argocd-repo-server --tail=50
+kubectl describe pods -n ingress-lab</code></pre></div><h3>Recheck the rendered chart and routes</h3><div class="code"><button type="button">Copy</button><pre><code>helm lint charts/nginx --strict
+helm template nginx charts/nginx -n ingress-lab
+powershell -ExecutionPolicy Bypass -File scripts/argocd-check.ps1
+powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>OutOfSync versus Degraded?</summary><p><strong>Answer:</strong> OutOfSync is a desired/live comparison result. Degraded is a health result. They answer different questions and can occur independently.</p></details><details class="interview" open><summary>Why is a valid manifest denied?</summary><p><strong>Answer:</strong> The AppProject may disallow that repository, destination or resource kind, or Kubernetes RBAC/admission may deny the API request. Read the actual error before changing permissions.</p></details></section><section id="lab11"><span class="number">LAB 2.11</span><h2>Pause management, restore baseline and clean up deliberately</h2><p>End practice with replicaCount 2, no prune-demo template, and manual sync policy in the committed nginx Application. Apply the baseline Application and sync all three. The control plane can remain installed for learning. To return management to Helm, first remove the Argo Applications WITHOUT cascading deletion, verify they are gone, then use the Lab 1 Helm deployment script to reconcile the frozen Helm records to the current chart. Do not uninstall a frozen application Helm release while Argo still owns it. The commands below explicitly preserve workloads.</p><h3>Final baseline checks</h3><div class="code"><button type="button">Copy</button><pre><code>git status --short
+# Restore your intended manual policy in gitops/applications/nginx.yaml; commit/push it.
+kubectl apply -f gitops/applications/
+powershell -ExecutionPolicy Bypass -File scripts/argocd-sync.ps1
+powershell -ExecutionPolicy Bypass -File scripts/argocd-check.ps1</code></pre></div><h3>Optional hand-back to Helm; preserves workloads</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl get applications -n argocd -o yaml
+# Confirm these lab Applications have NO resources-finalizer before deletion.
+kubectl delete application lab-nginx lab-prometheus lab-grafana -n argocd --cascade=orphan
+kubectl get deployments -n ingress-lab
+powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1</code></pre></div><h3>Optional Argo CD control-plane removal after hand-back</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl delete ingress argocd -n argocd
+kubectl delete appproject ingress-lab -n argocd
+helm uninstall argocd -n argocd
+# Namespace and CRDs may remain; do not blindly delete shared CRDs or namespaces.</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>What is cascading Application deletion?</summary><p><strong>Answer:</strong> With the Argo resources-finalizer, deleting an Application can delete its managed resources. These examples intentionally omit that finalizer. Check live metadata before deleting.</p></details><details class="interview" open><summary>Can Helm and Argo manage the same workloads simultaneously?</summary><p><strong>Answer:</strong> They can issue conflicting updates. Choose one active owner; freeze Helm during GitOps and deliberately hand back ownership before running its lifecycle commands.</p></details></section><section><h2>Every GitOps manifest, explained</h2><p>argocd-values.yaml configures the control plane. AppProject restricts the source and destination. Applications point to the existing charts and begin in manual mode. argocd-ingress.yaml routes the UI. The exercise ConfigMap is disposable.</p><details><summary>gitops/applications/grafana.yaml</summary><div class="code"><button type="button">Copy</button><pre><code>apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lab-grafana
+  namespace: argocd
+  # No resources-finalizer: deleting this Application preserves workloads.
+spec:
+  project: ingress-lab
+  source:
+    repoURL: https://github.com/vrdipu/ingress-lab.git
+    targetRevision: main
+    path: charts/grafana
+    helm:
+      releaseName: grafana
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-lab
+  # Start with MANUAL sync so students can inspect the adoption diff.
+  syncPolicy:
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+</code></pre></div></details><details><summary>gitops/applications/nginx.yaml</summary><div class="code"><button type="button">Copy</button><pre><code>apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lab-nginx
+  namespace: argocd
+  # No resources-finalizer: deleting this Application preserves workloads.
+spec:
+  project: ingress-lab
+  source:
+    repoURL: https://github.com/vrdipu/ingress-lab.git
+    targetRevision: main
+    path: charts/nginx
+    helm:
+      releaseName: nginx
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-lab
+  # Start with MANUAL sync so students can inspect the adoption diff.
+  syncPolicy:
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+</code></pre></div></details><details><summary>gitops/applications/prometheus.yaml</summary><div class="code"><button type="button">Copy</button><pre><code>apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lab-prometheus
+  namespace: argocd
+  # No resources-finalizer: deleting this Application preserves workloads.
+spec:
+  project: ingress-lab
+  source:
+    repoURL: https://github.com/vrdipu/ingress-lab.git
+    targetRevision: main
+    path: charts/prometheus
+    helm:
+      releaseName: prometheus
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-lab
+  # Start with MANUAL sync so students can inspect the adoption diff.
+  syncPolicy:
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+</code></pre></div></details><details><summary>gitops/argocd-ingress.yaml</summary><div class="code"><button type="button">Copy</button><pre><code>apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: argocd.lab.test
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80
+</code></pre></div></details><details><summary>gitops/argocd-values.yaml</summary><div class="code"><button type="button">Copy</button><pre><code># Local learning installation; not a production HA control plane.
+crds:
+  install: true
+configs:
+  params:
+    server.insecure: true
+  cm:
+    url: http://argocd.lab.test:8080
+    timeout.reconciliation: 60s
+    application.resourceTrackingMethod: annotation
+server:
+  replicas: 1
+  service:
+    type: ClusterIP
+controller:
+  replicas: 1
+repoServer:
+  replicas: 1
+applicationSet:
+  replicas: 1
+dex:
+  enabled: false
+notifications:
+  enabled: false
+</code></pre></div></details><details><summary>gitops/bootstrap/project.yaml</summary><div class="code"><button type="button">Copy</button><pre><code>apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ingress-lab
+  namespace: argocd
+spec:
+  description: Three existing ingress lab applications, one destination namespace
+  sourceRepos:
+    - https://github.com/vrdipu/ingress-lab.git
+  destinations:
+    - namespace: ingress-lab
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - {group: apps, kind: Deployment}
+    - {group: &quot;&quot;, kind: Service}
+    - {group: &quot;&quot;, kind: ConfigMap}
+    - {group: networking.k8s.io, kind: Ingress}
+</code></pre></div></details><details><summary>gitops/exercises/prune-demo.yaml</summary><div class="code"><button type="button">Copy</button><pre><code>apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitops-prune-demo
+  namespace: ingress-lab
+data:
+  lesson: Remove this template from Git, sync with prune, and this ConfigMap disappears.
+</code></pre></div></details></section><section><h2>Official references</h2><p><a href="https://argo-cd.readthedocs.io/en/stable/getting_started/">Getting started</a> · <a href="https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/">Auto-sync, self-heal and prune</a> · <a href="https://argo-cd.readthedocs.io/en/stable/user-guide/helm/">Helm rendering</a> · <a href="https://argo-cd.readthedocs.io/en/stable/user-guide/projects/">Projects</a> · <a href="https://argo-cd.readthedocs.io/en/stable/user-guide/resource_tracking/">Resource tracking</a> · <a href="https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd">Community Helm chart</a></p></section></main><footer>Learn locally • inspect the diff • commit the intended state<span id="status" role="status" aria-live="polite"></span></footer><script>document.querySelectorAll('.code button').forEach(b=>b.addEventListener('click',async()=>{const t=b.parentElement.querySelector('code').textContent;try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t)}else{const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.append(a);a.select();if(!document.execCommand('copy'))throw Error('copy');a.remove()}b.textContent='Copied!';document.getElementById('status').textContent='Command copied';setTimeout(()=>b.textContent='Copy',1800)}catch(e){b.textContent='Select text to copy';document.getElementById('status').textContent='Clipboard unavailable. Select the command and press Ctrl+C.'}}));</script></html>

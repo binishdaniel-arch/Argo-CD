@@ -6,6 +6,8 @@ providers:
   kubernetesIngress:
     enabled: true
     nativeLBByDefault: true
+    ingressEndpoint:
+      ip: 127.0.0.1
     publishedService:
       enabled: false
   kubernetesGateway:

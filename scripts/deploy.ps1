@@ -1,4 +1,8 @@
 $ErrorActionPreference = 'Stop'
+$gitopsApps = ''
+$applicationCrd = kubectl get crd applications.argoproj.io --ignore-not-found -o name
+if ($applicationCrd) { $gitopsApps = kubectl get applications.argoproj.io -n argocd -o name --ignore-not-found }
+if ($gitopsApps -match 'application.argoproj.io/lab-(nginx|prometheus|grafana)') { throw 'Argo CD now manages these apps. Follow Lab 2 hand-back steps before running Helm deployment or cleanup.' }
 Set-Location (Split-Path $PSScriptRoot -Parent)
 function Run-Checked { param([scriptblock]$Command) & $Command; if ($LASTEXITCODE -ne 0) { throw "Command failed: $Command" } }
 $context = kubectl config current-context

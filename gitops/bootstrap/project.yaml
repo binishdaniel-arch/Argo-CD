@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ingress-lab
+  namespace: argocd
+spec:
+  description: Three existing ingress lab applications, one destination namespace
+  sourceRepos:
+    - https://github.com/vrdipu/ingress-lab.git
+  destinations:
+    - namespace: ingress-lab
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - {group: apps, kind: Deployment}
+    - {group: "", kind: Service}
+    - {group: "", kind: ConfigMap}
+    - {group: networking.k8s.io, kind: Ingress}
