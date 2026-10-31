@@ -17,7 +17,7 @@ Lab 2 was rewritten around one install-first, automatic-deployment workflow. The
 | Linux CLI installer | Same version downloaded and checksum verified in isolated Alpine 3.22 + Bash; version/help executed |
 | Authenticated CLI operations | PASS: repo add/list, app list/get, get --refresh, wait --sync --health, history using the local API and temporary token authentication |
 | CLI login and saved connection settings | PASS: real CLI login using password on stdin, then all five guide commands without repeating connection flags. Temporary CLI config removed afterward. Interactive browser/keyboard entry was not automated. |
-| Documentation checks | PASS: 8 sequential beginner steps, 22 visible interview answers, 24 copy buttons, links/anchors and SVG XML valid |
+| Documentation checks | PASS: 8 sequential beginner steps, component lesson, 32 visible interview answers, 28 copy buttons, links/anchors and SVG XML valid |
 | Live KillerCoda/browser visual/clipboard checks | Not executed; platform helpers and Linux CLI were validated locally, not in a connected external playground |
 
 ## What proves the automatic loop
@@ -46,3 +46,7 @@ The existing cluster already had Argo CD and the original three Lab 1 workloads,
 The original lab-nginx/lab-prometheus/lab-grafana Applications are retained. Demo and original workloads remain installed. No finalizer was added to demo-nginx; no cascading deletion was tested. Tokens used for API-driven CLI testing were passed through process environments. The separate real CLI login test wrote a temporary config, verified all five commands, then removed it. No password or token was printed or committed. Downloaded test binaries are under ignored .lab-runtime/, not committed. Start `bash scripts/argocd-ui.sh` to reopen the Argo URL.
 
 The CLI HTTP login test exposed an unnecessary TLS probe which reset the local port-forward. The final login command includes `--skip-test-tls`; the UI forward was restarted, login succeeded, and all five commands then worked using the saved connection settings. This option is for the lab HTTP endpoint, not for bypassing certificate checks on production HTTPS.
+
+## Component lesson verification
+
+The component diagram and Service table were checked against the running namespace. All four Services had matching target pod ports and ready EndpointSlices. The application-controller StatefulSet was ready and correctly had no Service in this chart configuration. All three documented component log commands succeeded. Dex and notifications remain disabled; ApplicationSet is installed but unused by the single-Application demo. These checks were read-only; no pod or Service was changed. The HTML/SVG/link checks passed with 32 visible interview answers and 28 copy buttons in Lab 2.

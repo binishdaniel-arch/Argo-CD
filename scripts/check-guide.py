@@ -28,7 +28,7 @@ class Check(HTMLParser):
     def handle_data(self, data):
         if self.in_code: self.commands.append(data)
 
-for name, expected_answers in [('index.html', 15), ('lab2-argocd.html', 22), ('environments.html', 0)]:
+for name, expected_answers in [('index.html', 15), ('lab2-argocd.html', 32), ('environments.html', 0)]:
     parser = Check()
     parser.feed(Path(name).read_text(encoding='utf-8'))
     assert len(parser.ids) == len(set(parser.ids)), name

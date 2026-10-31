@@ -34,7 +34,7 @@ Do not select the docker-desktop context. The scripts recognize `/etc/killercoda
 
 ## Section 2 ? Argo CD, taught from the beginning
 
-Open **lab2-argocd.html** and follow one simple sequence:
+Open **lab2-argocd.html** and follow one simple sequence. After installation, the new Components and Services lesson explains the architecture, observed Service ports, reconciliation flow and troubleshooting. [Component notes](docs/ARGOCD-COMPONENTS.md) include a diagram and 10 additional interview answers (32 total in Lab 2).
 
 1. Deploy Argo CD first. No ingress or Lab 1 installation is required.
 2. Open the Argo CD URL and sign in.
