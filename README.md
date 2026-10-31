@@ -20,6 +20,10 @@ powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
 
 Use the HTML guide for hosts-file/browser instructions, manual installation, traffic flow, troubleshooting and cleanup.
 
+## Section 2: Argo CD and GitOps
+
+Open **lab2-argocd.html** for 11 guided labs, 22 interview answers, and GitOps management of these same three applications. Run `powershell -ExecutionPolicy Bypass -File scripts/argocd-setup.ps1` after Lab 1. See [Argo CD test results](docs/ARGOCD-TEST-RESULTS.md).
+
 ## Scope
 
 Three locally authored Helm charts: nginx, prometheus, grafana. Each has two replicas and a ClusterIP Service and host-based Ingress. Official Traefik chart 42.2.0 is vendored under vendor/. Grafana datasource is provisioned. Prometheus scrapes itself and Grafana. NGINX has no metrics exporter. Two independent Prometheus instances and ephemeral Grafana state are deliberate learning simplifications, not production HA. HTTP and anonymous Grafana are restricted to a localhost exercise. All images and controller chart are pinned by version tag, not immutable digest.

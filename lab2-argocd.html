@@ -24,14 +24,7 @@ git commit -m &quot;Restore nginx baseline to two replicas&quot;
 git push origin main
 kubectl annotate application lab-nginx -n argocd argocd.argoproj.io/refresh=hard --overwrite
 # Wait until Details shows the new Git revision, then:
-powershell -ExecutionPolicy Bypass -File scripts/argocd-sync.ps1 -App nginx</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>Refresh versus sync?</summary><p><strong>Answer:</strong> Refresh recalculates comparison, and hard refresh also invalidates cached manifests. Sync applies desired manifests. A refresh can lead to deployment only when automated sync is enabled.</p></details><details class="interview" open><summary>What proves the change came from Git?</summary><p><strong>Answer:</strong> The Application’s resolved commit SHA, the desired/live diff and sync operation history link the rollout to the pushed commit, rather than a local uncommitted edit.</p></details></section><section id="lab6"><span class="number">LAB 2.06</span><h2>Automated sync and self-healing</h2><p>For permanent policy changes edit the Application YAML in Git, commit/push, then kubectl apply the declaration. These bootstrap Applications are not themselves managed by a parent Application, so pushing a policy file alone does not update the live Application. Auto-sync deploys Git changes; selfHeal repairs live drift even when the Git commit has not changed. Start with prune false. After applying the policy, manually scale NGINX to 1. Observe Argo CD restore spec.replicas to the Git value 2, then wait for 2/2 ready. Do not use this technique where an HPA is meant to own replicas without first planning field ownership.</p><h3>Create the practice auto-sync policy</h3><div class="code"><button type="button">Copy</button><pre><code>@&#x27;
-automated:
-  enabled: true
-  prune: false
-  selfHeal: true
-&#x27;@
-# Add the block above under spec.syncPolicy in gitops/applications/nginx.yaml.
-# Keep the existing syncOptions block at the same indentation as automated.
+powershell -ExecutionPolicy Bypass -File scripts/argocd-sync.ps1 -App nginx</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>Refresh versus sync?</summary><p><strong>Answer:</strong> Refresh recalculates comparison, and hard refresh also invalidates cached manifests. Sync applies desired manifests. A refresh can lead to deployment only when automated sync is enabled.</p></details><details class="interview" open><summary>What proves the change came from Git?</summary><p><strong>Answer:</strong> The Application’s resolved commit SHA, the desired/live diff and sync operation history link the rollout to the pushed commit, rather than a local uncommitted edit.</p></details></section><section id="lab6"><span class="number">LAB 2.06</span><h2>Automated sync and self-healing</h2><p>For permanent policy changes edit the Application YAML in Git, commit/push, then kubectl apply the declaration. These bootstrap Applications are not themselves managed by a parent Application, so pushing a policy file alone does not update the live Application. Auto-sync deploys Git changes; selfHeal repairs live drift even when the Git commit has not changed. Start with prune false. After applying the policy, manually scale NGINX to 1. Observe Argo CD restore spec.replicas to the Git value 2, then wait for 2/2 ready. Do not use this technique where an HPA is meant to own replicas without first planning field ownership.</p><h3>Create the practice auto-sync policy</h3><div class="code"><button type="button">Copy</button><pre><code>powershell -ExecutionPolicy Bypass -File scripts/argocd-policy.ps1 -Mode Auto
 git add gitops/applications/nginx.yaml
 git commit -m &quot;Enable nginx auto-sync and self-healing&quot;
 git push origin main
@@ -73,7 +66,10 @@ kubectl describe pods -n ingress-lab</code></pre></div><h3>Recheck the rendered 
 helm template nginx charts/nginx -n ingress-lab
 powershell -ExecutionPolicy Bypass -File scripts/argocd-check.ps1
 powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1</code></pre></div><h3>Interview questions &amp; answers</h3><details class="interview" open><summary>OutOfSync versus Degraded?</summary><p><strong>Answer:</strong> OutOfSync is a desired/live comparison result. Degraded is a health result. They answer different questions and can occur independently.</p></details><details class="interview" open><summary>Why is a valid manifest denied?</summary><p><strong>Answer:</strong> The AppProject may disallow that repository, destination or resource kind, or Kubernetes RBAC/admission may deny the API request. Read the actual error before changing permissions.</p></details></section><section id="lab11"><span class="number">LAB 2.11</span><h2>Pause management, restore baseline and clean up deliberately</h2><p>End practice with replicaCount 2, no prune-demo template, and manual sync policy in the committed nginx Application. Apply the baseline Application and sync all three. The control plane can remain installed for learning. To return management to Helm, first remove the Argo Applications WITHOUT cascading deletion, verify they are gone, then use the Lab 1 Helm deployment script to reconcile the frozen Helm records to the current chart. Do not uninstall a frozen application Helm release while Argo still owns it. The commands below explicitly preserve workloads.</p><h3>Final baseline checks</h3><div class="code"><button type="button">Copy</button><pre><code>git status --short
-# Restore your intended manual policy in gitops/applications/nginx.yaml; commit/push it.
+powershell -ExecutionPolicy Bypass -File scripts/argocd-policy.ps1 -Mode Manual
+git add gitops/applications/nginx.yaml
+git commit -m &quot;Restore manual GitOps baseline&quot;
+git push origin main
 kubectl apply -f gitops/applications/
 powershell -ExecutionPolicy Bypass -File scripts/argocd-sync.ps1
 powershell -ExecutionPolicy Bypass -File scripts/argocd-check.ps1</code></pre></div><h3>Optional hand-back to Helm; preserves workloads</h3><div class="code"><button type="button">Copy</button><pre><code>kubectl get applications -n argocd -o yaml
@@ -104,6 +100,10 @@ spec:
     namespace: ingress-lab
   # Start with MANUAL sync so students can inspect the adoption diff.
   syncPolicy:
+    automated:
+      enabled: false
+      prune: false
+      selfHeal: false
     syncOptions:
       - ApplyOutOfSyncOnly=true
 </code></pre></div></details><details><summary>gitops/applications/nginx.yaml</summary><div class="code"><button type="button">Copy</button><pre><code>apiVersion: argoproj.io/v1alpha1
@@ -127,6 +127,10 @@ spec:
     namespace: ingress-lab
   # Start with MANUAL sync so students can inspect the adoption diff.
   syncPolicy:
+    automated:
+      enabled: false
+      prune: false
+      selfHeal: false
     syncOptions:
       - ApplyOutOfSyncOnly=true
 </code></pre></div></details><details><summary>gitops/applications/prometheus.yaml</summary><div class="code"><button type="button">Copy</button><pre><code>apiVersion: argoproj.io/v1alpha1
@@ -150,6 +154,10 @@ spec:
     namespace: ingress-lab
   # Start with MANUAL sync so students can inspect the adoption diff.
   syncPolicy:
+    automated:
+      enabled: false
+      prune: false
+      selfHeal: false
     syncOptions:
       - ApplyOutOfSyncOnly=true
 </code></pre></div></details><details><summary>gitops/argocd-ingress.yaml</summary><div class="code"><button type="button">Copy</button><pre><code>apiVersion: networking.k8s.io/v1

@@ -19,5 +19,9 @@ spec:
     namespace: ingress-lab
   # Start with MANUAL sync so students can inspect the adoption diff.
   syncPolicy:
+    automated:
+      enabled: false
+      prune: false
+      selfHeal: false
     syncOptions:
       - ApplyOutOfSyncOnly=true

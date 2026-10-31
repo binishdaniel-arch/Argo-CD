@@ -24,6 +24,8 @@ foreach ($name in $apps) {
     if (-not ($ours -and $state.phase -eq 'Succeeded')) { throw "Sync timed out: $application" }
     kubectl wait application/$application -n argocd --for=jsonpath='{.status.sync.status}'=Synced --timeout=120s
     if ($LASTEXITCODE -ne 0) { throw "Not Synced: $application" }
+    kubectl rollout status "deployment/$name" -n ingress-lab --timeout=180s
+    if ($LASTEXITCODE -ne 0) { throw "Deployment rollout failed: $name" }
     kubectl wait application/$application -n argocd --for=jsonpath='{.status.health.status}'=Healthy --timeout=180s
     if ($LASTEXITCODE -ne 0) { throw "Not Healthy: $application" }
   } finally { Remove-Item -LiteralPath $patchFile -ErrorAction SilentlyContinue }
