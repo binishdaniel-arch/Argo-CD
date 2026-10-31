@@ -11,7 +11,7 @@ spec:
     metadata:
       labels:
         app: demo-nginx
-        demo-version: v1
+        demo-version: v2
     spec:
       containers:
         - name: nginx
