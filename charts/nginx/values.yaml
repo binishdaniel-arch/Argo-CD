@@ -1,4 +1,4 @@
-replicaCount: 3
+replicaCount: 2
 image: "nginx:1.28.0-alpine"
 service:
   port: 80
