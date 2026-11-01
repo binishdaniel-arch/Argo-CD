@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/vrdipu/ingress-lab.git
+    repoURL: https://github.com/binishdaniel-arch/Argo-CD.git
     targetRevision: main
     path: gitops/demo/manifests
   destination:
