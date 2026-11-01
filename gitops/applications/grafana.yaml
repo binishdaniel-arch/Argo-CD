@@ -7,7 +7,7 @@ metadata:
 spec:
   project: ingress-lab
   source:
-    repoURL: https://github.com/vrdipu/ingress-lab.git
+    repoURL: https://github.com/binishdaniel-arch/Argo-CD.git
     targetRevision: main
     path: charts/grafana
     helm:
